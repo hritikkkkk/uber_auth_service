@@ -1,4 +1,4 @@
-package com.hritik.auth_service.config;
+package com.hritik.auth_service.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
