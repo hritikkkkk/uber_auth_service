@@ -20,7 +20,7 @@ public class JwtService implements CommandLineRunner {
     @Value("${jwt.expiry}")
     private int expiry;
 
-    private String createToken(Map<String, Object> payload, String email) {
+    public String createToken(Map<String, Object> payload, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiry * 1000L);
         return Jwts.builder()
@@ -29,6 +29,10 @@ public class JwtService implements CommandLineRunner {
                 .expiration(expiryDate).subject(email)
                 .signWith(getSignKey())
                 .compact();
+    }
+
+    public String createToken(String email) {
+        return createToken(new HashMap<>(), email);
     }
 
     private Claims extractAllPayloads(String token) {
