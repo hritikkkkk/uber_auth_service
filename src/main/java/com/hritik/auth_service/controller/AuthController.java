@@ -8,10 +8,11 @@ import com.hritik.auth_service.DTO.PassengerSignupRequestDto;
 import com.hritik.auth_service.service.AuthService;
 
 import com.hritik.auth_service.service.JwtService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -19,16 +20,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
 
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    @Value("${cookie.expiry}")
-    private int cookieExpiry;
 
     private final AuthService authService;
 
@@ -59,7 +61,7 @@ public class AuthController {
                     .httpOnly(true)
                     .secure(false)
                     .path("/")
-                    .maxAge(cookieExpiry)
+                    .maxAge(Duration.ofDays(11))
                     .build();
 
 
@@ -67,7 +69,7 @@ public class AuthController {
 
 
             return ResponseEntity.ok(
-                    AuthResponseDto.builder().success(true).build()
+                    AuthResponseDto.builder().success(true).email(authRequestDto.getEmail()).build()
             );
 
         } catch (Exception ex) {
@@ -77,6 +79,26 @@ public class AuthController {
                             .success(false)
                             .build());
         }
+    }
+
+    @GetMapping("/validate")
+    public ResponseEntity<AuthResponseDto> validate(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(AuthResponseDto.builder()
+                            .success(false)
+                            .build());
+        }
+
+        UserDetails user = (UserDetails) authentication.getPrincipal();
+
+        return ResponseEntity.ok(
+                AuthResponseDto.builder()
+                        .success(true)
+                        .email(user.getUsername())
+                        .build()
+        );
     }
 
 

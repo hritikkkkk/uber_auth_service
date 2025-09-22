@@ -1,6 +1,7 @@
 package com.hritik.auth_service.service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,7 +56,7 @@ public class JwtService implements CommandLineRunner {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    private String extractEmail(String token) {
+    public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -68,7 +69,7 @@ public class JwtService implements CommandLineRunner {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    private Boolean validateToken(String token, String email) {
+    public Boolean validateToken(String token, String email) {
         final String userEmailFetchedFromToken = extractEmail(token);
         return (userEmailFetchedFromToken.equals(email)) && !isTokenExpired(token);
     }
