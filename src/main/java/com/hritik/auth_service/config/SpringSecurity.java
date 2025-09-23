@@ -46,6 +46,9 @@ public class SpringSecurity implements WebMvcConfigurer {
                                 .requestMatchers("/api/v1/auth/signup/*").permitAll()
                                 .requestMatchers("/api/v1/auth/signin/*").permitAll()
                                 .requestMatchers("/api/v1/auth/validate").authenticated()
+                                .requestMatchers("/api/v1/auth/verify-email").permitAll()
+                                .requestMatchers("/api/v1/auth/resend-verification").permitAll()
+                                .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

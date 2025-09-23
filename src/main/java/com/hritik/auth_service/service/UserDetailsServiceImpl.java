@@ -20,14 +20,21 @@ import java.util.Optional;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
-    private  PassengerRepository passengerRepository;
-
+    private PassengerRepository passengerRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<Passenger> passenger = passengerRepository.findPassengerByEmail(email); // email is the unique identifier
-        if(passenger.isPresent()) {
-            return new AuthPassengerDetails(passenger.get());
+        Optional<Passenger> passenger = passengerRepository.findPassengerByEmail(email);
+
+        if (passenger.isPresent()) {
+            Passenger p = passenger.get();
+
+            // Check if email is verified
+            if (!p.getEmailVerified()) {
+                throw new RuntimeException("Email not verified. Please check your email and verify your account.");
+            }
+
+            return new AuthPassengerDetails(p);
         } else {
             throw new UsernameNotFoundException("Cannot find the Passenger by the given Email");
         }

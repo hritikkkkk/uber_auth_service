@@ -40,6 +40,7 @@ dependencies {
 	implementation 'com.hritik:entity-service:0.0.1-SNAPSHOT'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation("io.jsonwebtoken:jjwt:0.13.0")
+	implementation("org.springframework.boot:spring-boot-starter-mail:4.0.0-M3")
 }
 
 tasks.named('test') {

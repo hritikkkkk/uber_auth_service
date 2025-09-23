@@ -1,15 +1,11 @@
 package com.hritik.auth_service.controller;
 
 
-import com.hritik.auth_service.DTO.AuthRequestDto;
-import com.hritik.auth_service.DTO.AuthResponseDto;
-import com.hritik.auth_service.DTO.PassengerDTO;
-import com.hritik.auth_service.DTO.PassengerSignupRequestDto;
+import com.hritik.auth_service.DTO.*;
 import com.hritik.auth_service.service.AuthService;
 
+import com.hritik.auth_service.service.EmailVerificationService;
 import com.hritik.auth_service.service.JwtService;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -33,20 +29,35 @@ import java.time.Duration;
 public class AuthController {
 
     private final AuthService authService;
-
     private final AuthenticationManager authenticationManager;
-
     private final JwtService jwtService;
-
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/signup/passenger")
-    public ResponseEntity<PassengerDTO> signUp(@RequestBody PassengerSignupRequestDto passengerSignupRequestDto) {
-        PassengerDTO response = authService.signupPassenger(passengerSignupRequestDto);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    public ResponseEntity<?> signUp(@RequestBody PassengerSignupRequestDto passengerSignupRequestDto) {
+        try {
+            PassengerDTO response = authService.signupPassenger(passengerSignupRequestDto);
+            return ResponseEntity.ok(
+                    AuthResponseDto.builder()
+                            .success(true)
+                            .email(response.getEmail())
+                            .emailVerified(false)
+                            .message("Account created successfully! Please check your email to verify your account.")
+                            .build()
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(
+                    AuthResponseDto.builder()
+                            .success(false)
+                            .message(e.getMessage())
+                            .build()
+            );
+        }
     }
 
     @PostMapping("/signin/passenger")
-    public ResponseEntity<?> signIn(@RequestBody AuthRequestDto authRequestDto, HttpServletResponse response) {
+    public ResponseEntity<?> signIn(@RequestBody AuthRequestDto authRequestDto,
+                                    HttpServletResponse response) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -64,20 +75,74 @@ public class AuthController {
                     .maxAge(Duration.ofDays(11))
                     .build();
 
-
             response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-
             return ResponseEntity.ok(
-                    AuthResponseDto.builder().success(true).email(authRequestDto.getEmail()).build()
+                    AuthResponseDto.builder()
+                            .success(true)
+                            .email(authRequestDto.getEmail())
+                            .emailVerified(true)
+                            .message("Login successful")
+                            .build()
             );
 
         } catch (Exception ex) {
+            String errorMessage = "Invalid credentials";
+
+            if (ex.getMessage().contains("Email not verified")) {
+                errorMessage = "Please verify your email before signing in";
+            }
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(AuthResponseDto.builder()
                             .success(false)
+                            .message(errorMessage)
                             .build());
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<EmailVerificationResponseDto> verifyEmail(
+            @RequestBody EmailVerificationRequestDto request) {
+
+        boolean verified = emailVerificationService.verifyEmail(request.getToken());
+        if (verified) {
+            return ResponseEntity.ok(
+                    EmailVerificationResponseDto.builder()
+                            .success(true)
+                            .message("Email verified successfully! You can now sign in.")
+                            .build()
+            );
+        } else {
+            return ResponseEntity.badRequest().body(
+                    EmailVerificationResponseDto.builder()
+                            .success(false)
+                            .message("Invalid or expired verification token")
+                            .build()
+            );
+        }
+    }
+    @PostMapping("/resend-verification")
+    public ResponseEntity<EmailVerificationResponseDto> resendVerification(
+            @RequestBody ResendVerificationRequestDto request) {
+
+        boolean sent = emailVerificationService.resendVerificationEmail(request.getEmail());
+
+        if (sent) {
+            return ResponseEntity.ok(
+                    EmailVerificationResponseDto.builder()
+                            .success(true)
+                            .email(request.getEmail())
+                            .message("Verification email sent successfully")
+                            .build()
+            );
+        } else {
+            return ResponseEntity.badRequest().body(
+                    EmailVerificationResponseDto.builder()
+                            .success(false)
+                            .message("Unable to send verification email. Please check your email address.")
+                            .build()
+            );
         }
     }
 
@@ -88,6 +153,7 @@ public class AuthController {
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(AuthResponseDto.builder()
                             .success(false)
+                            .message("Not authenticated")
                             .build());
         }
 
@@ -97,9 +163,9 @@ public class AuthController {
                 AuthResponseDto.builder()
                         .success(true)
                         .email(user.getUsername())
+                        .emailVerified(true)
+                        .message("User is authenticated")
                         .build()
         );
     }
-
-
 }

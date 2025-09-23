@@ -11,4 +11,7 @@ public class AuthResponseDto {
     public Boolean success;
 
     public String email;
+
+    public Boolean emailVerified;
+    public String message;
 }
