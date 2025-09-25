@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 @Slf4j
 @Component
@@ -36,15 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String token = null;
-
-        if (request.getCookies() != null) {
-            token = Arrays.stream(request.getCookies())
-                    .filter(c -> "JwtToken".equals(c.getName()))
-                    .map(Cookie::getValue)
-                    .findFirst()
-                    .orElse(null);
-        }
+        String token = getCookieValue(request);
 
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             String email = jwtService.extractEmail(token);
@@ -57,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
-                                    userDetails.getAuthorities() // include roles
+                                    userDetails.getAuthorities()
                             );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
@@ -70,11 +61,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private String getCookieValue(HttpServletRequest request) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("JwtToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Exclude only login & signup endpoints
         String path = request.getRequestURI();
-        return path.equals("/api/v1/auth/signin/passenger") ||
-                path.equals("/api/v1/auth/signup/passenger");
+        return path.startsWith("/api/v1/auth/signin")
+                || path.startsWith("/api/v1/auth/signup")
+                || path.equals("/api/v1/auth/verify-email")
+                || path.equals("/api/v1/auth/resend-verification");
     }
+
 }
+
